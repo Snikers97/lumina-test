@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumina POS — E2E Чеклист тестирования</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #10b981;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      color: var(--primary);
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Sticky Progress Bar */
+    .sticky-panel {
+      position: sticky;
+      top: 12px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      z-index: 100;
+      margin-bottom: 24px;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #0f172a;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.3s ease;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    button {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: var(--border);
+    }
+
+    button.active {
+      background: var(--primary);
+      color: #0f172a;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    button.btn-danger {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    button.btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* Accordions / Stages */
+    .stage {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .stage-header {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      background: rgba(255, 255, 255, 0.02);
+      transition: background 0.2s;
+    }
+
+    .stage-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .stage-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stage-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #0f172a;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .chevron {
+      transition: transform 0.2s;
+      font-size: 0.8rem;
+    }
+
+    .stage.closed .chevron {
+      transform: rotate(-90deg);
+    }
+
+    .stage.closed .stage-content {
+      display: none;
+    }
+
+    .stage-content {
+      padding: 12px 18px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section {
+      margin-bottom: 14px;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    /* Checklist Item */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 0.92rem;
+      transition: opacity 0.2s;
+    }
+
+    .check-item input[type="checkbox"] {
+      appearance: none;
+      min-width: 18px;
+      height: 18px;
+      border: 2px solid var(--text-muted);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      margin-top: 2px;
+      transition: all 0.2s;
+    }
+
+    .check-item input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .check-item input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid #0f172a;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .check-item span {
+      flex: 1;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .check-item.done span {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .check-item.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Lumina POS — E2E Testing Checklist</h1>
+    <div class="subtitle">Сквозной план тестирования ключевых модулей ресторанной POS-системы</div>
+  </header>
+
+  <!-- Sticky Progress Panel -->
+  <div class="sticky-panel">
+    <div class="progress-stats">
+      <span>Прогресс тестирования</span>
+      <span id="progressText">0% (0 / 0)</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="controls">
+      <div class="btn-group">
+        <button class="filter-btn active" data-filter="all">Все</button>
+        <button class="filter-btn" data-filter="pending">В работе</button>
+        <button class="filter-btn" data-filter="completed">Пройденные</button>
+      </div>
+      <div class="btn-group">
+        <button id="toggleAllBtn">Свернуть все</button>
+        <button class="btn-danger" id="resetBtn">Сброс</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checklist Stages -->
+  <div id="checklist">
+
+    <!-- Этап 1 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 1: Активация и Первичный Вход <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Первый запуск устройства:</div>
+          <label class="check-item"><input type="checkbox"><span>Откройте приложение на новом планшете/эмуляторе. Должен отображаться ActivationScreen на армянском языке.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Введите неверный код активации -> проверьте отображение ошибки.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Введите корректный код терминала -> убедитесь, что устройство успешно привязывается к ресторану.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Проверка секретного входа в SuperAdmin:</div>
+          <label class="check-item"><input type="checkbox"><span>Нажмите 5 раз на логотип с телефоном.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Введите секретный пароль 0000 -> убедитесь, что открывается модальное окно SuperAdmin.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 2 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 2: Авторизация Персонала (Welcome Screen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Вход официанта / кассира:</div>
+          <label class="check-item"><input type="checkbox"><span>На экране WelcomeScreen введите логин и пароль сотрудника.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Убедитесь, что система пускает пользователя с соответствующими правами (Официант, Менеджер, Админ).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Вход SuperAdmin с WelcomeScreen:</div>
+          <label class="check-item"><input type="checkbox"><span>Нажмите 5 раз на иконку с приборами.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Введите 0000 -> проверьте переход к Google Auth / Локальному входу.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 3 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 3: Залы, Столы и Бронирование <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Навигация по залам:</div>
+          <label class="check-item"><input type="checkbox"><span>Переключитесь между залами (Основной зал, Терраса и т.д.).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Работа со столами:</div>
+          <label class="check-item"><input type="checkbox"><span>Выберите свободный стол (зеленый статус).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Создайте заказ -> убедитесь, что стол меняет статус на «Занят» (красный).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">3. Бронирование (ReservationsScreen):</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите в раздел бронирований. Создайте новую бронь на имя гостя.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Убедитесь, что стол помечается как забронированный в указанное время.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 4 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 4: Формирование Заказа и Работа с Меню <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Навигация по меню:</div>
+          <label class="check-item"><input type="checkbox"><span>Проверьте категории и поиск блюд по названию.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Добавление блюд в корзину:</div>
+          <label class="check-item"><input type="checkbox"><span>Добавьте обычный товар -> проверьте увеличение счетчика.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Добавьте весовой товар -> должно появиться окно ввода веса (в граммах/килограммах).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Добавьте комментарий к блюду (например, «без лука»).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">3. Редактирование корзины:</div>
+          <label class="check-item"><input type="checkbox"><span>Уменьшите количество товара до 0 -> проверьте появление диалога подтверждения удаления.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Сохраните / отправьте заказ на кухню.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 5 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 5: Оплата и ФИСКАЛИЗАЦИЯ (ККТ / HDM) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Предчек:</div>
+          <label class="check-item"><input type="checkbox"><span>Распечатайте пречек для стола -> убедитесь, что распечатанный вид совпадает с настройками в Receipt Designer.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Оплата заказа:</div>
+          <label class="check-item"><input type="checkbox"><span>Проведите оплату Наличными (Cash).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проведите оплату Картой (Card).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте закрытие стола и его возврат в статус «Свободен».</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">3. Отчеты HDM (Касса):</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите в настройки HDM. Сделайте X-Report (промежуточный) и Z-Report (закрытие смены).</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 6 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 6: Склад (InventoryScreen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Просмотр «Մենյուի ապրանքներ» (Товары меню):</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите во вкладку «Մենյուի ապրանքներ».</span></label>
+          <label class="check-item"><input type="checkbox"><span>Нажмите на заголовок категории -> убедитесь, что список плавно раскрывается/сворачивается.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Нажмите «+» у товара меню -> проверьте, что поле «Գին» (Цена) скрыто, доступно только количество.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Просмотр «Հումք (Բաղադրիչներ)» (Сырье):</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите во вкладку «Հումք».</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте пагинацию (кнопки «Նախորդ» / «Հաջորդ» и номера страниц).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Нажмите «+» у сырья -> убедитесь, что доступен ввод и количества, и цены за единицу (դրամ).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">3. Добавление нового сырья:</div>
+          <label class="check-item"><input type="checkbox"><span>Нажмите «Ավելացնել Հումք».</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте мягкий прозрачный фон модального окна.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Создайте новое сырье -> убедитесь, что оно появилось в списке.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">4. История движения:</div>
+          <label class="check-item"><input type="checkbox"><span>Нажмите на товар -> откроется окно истории движения без темного блюра.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 7 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 7: Умные Тех. Карты (RecipesScreen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Выбор категории:</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите в раздел «Տեխ. քարտեր».</span></label>
+          <label class="check-item"><input type="checkbox"><span>Убедитесь, что категории отображаются на армянском языке и соответствуют вашему ресторану.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте, что подзаголовок шапки виден полностью (не обрезается).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Редактирование рецепта:</div>
+          <label class="check-item"><input type="checkbox"><span>Выберите блюдо. Добавьте ингредиент из списка.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Измените единицу измерения (կգ, գ, լ, մլ, հատ).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Укажите количество -> проверьте автоматический расчет себестоимости и наценки в % (դրամ).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">3. Проверка авто-списания:</div>
+          <label class="check-item"><input type="checkbox"><span>Продайте блюдо через корзину -> вернитесь на склад и убедитесь, что ингредиенты автоматически списались в нужном объеме.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 8 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 8: Офлайн-режим и Устойчивость <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Потеря соединения:</div>
+          <label class="check-item"><input type="checkbox"><span>Отключите Wi-Fi / Интернет на устройстве.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Попробуйте оформить локальный заказ.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Включите сеть обратно -> убедитесь, что данные синхронизировались с Firebase без потерь.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 9 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 9: Кадровый учет и Зарплаты (HRScreen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Управление сотрудниками:</div>
+          <label class="check-item"><input type="checkbox"><span>Перейдите в раздел HR.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Добавьте нового сотрудника (имя, фамилия, должность, дата приема, оклад).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Выдайте аванс / предоплату -> проверьте автоматический перерасчет остатка к выплате.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Права доступа (canManageHR):</div>
+          <label class="check-item"><input type="checkbox"><span>Зайдите под обычной учетной записью официанта -> убедитесь, что доступ к HR-модулю закрыт.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 10 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 10: Конструктор Чеков (ReceiptDesignerPage) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Кастомизация печатной формы:</div>
+          <label class="check-item"><input type="checkbox"><span>Измените название ресторана, адрес, текст в футере.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Измените размер шрифтов для разных блоков (заголовок, итоговая сумма, дата).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Настройте быстрые комментарии к чеку.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Проверка предпросмотра:</div>
+          <label class="check-item"><input type="checkbox"><span>Нажмите «Предпросмотр» -> убедитесь, что макет на экране на 100% совпадает с тем, что выйдет на чековом принтере.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 11 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 11: Чат Персонала и Уведомления (StaffChatModal) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Внутренний чат:</div>
+          <label class="check-item"><input type="checkbox"><span>Отправьте общее сообщение в чат с одного устройства -> проверьте получение на втором устройстве.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Отправьте личное сообщение конкретному сотруднику.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Экстренные вызовы и запросы:</div>
+          <label class="check-item"><input type="checkbox"><span>Отправьте запрос на очистку стола или отмену заказа -> проверьте, что администратору приходит push-уведомление / алерты со звуком.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 12 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 12: Аудит Кассы и Защита от Фрода (CashAuditModal / Anti-Fraud) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Контроль подозрительных действий:</div>
+          <label class="check-item"><input type="checkbox"><span>Попробуйте удалить уже сохраненный заказ -> проверьте, требуется ли подтверждение PIN-кодом администратора.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте регистрацию события в истории аудита с пометой «Подозрительное действие» (Fraud Control).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Снятие кассовых итогов:</div>
+          <label class="check-item"><input type="checkbox"><span>Проведите инкассацию / внесение наличных через модуль аудита кассы.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 13 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 13: Режим Сна и Энергосбережение (SleepModeScreen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Переход в режим ожидания:</div>
+          <label class="check-item"><input type="checkbox"><span>Оставьте планшет без действия на указанный интервал -> убедитесь, что включается SleepModeScreen с заставкой.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Каснитесь экрана -> проверьте мгновенное пробуждение без потери текущего состояния заказа.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 14 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 14: Лицензирование и Безопасность (LicenseExpiredScreen) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Истечение лицензии:</div>
+          <label class="check-item"><input type="checkbox"><span>Проверьте поведение системы при истечении срока действия лицензии -> должен блокироваться рабочий интерфейс и открываться экран продления.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Изоляция данных (Multi-Tenancy):</div>
+          <label class="check-item"><input type="checkbox"><span>Переключитесь на другой ресторан -> убедитесь, что столы, меню, склад и истории заказов полностью изолированы и не пересекаются.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 15 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 15: Синхронизация между устройствами в реальном времени (Multi-Device Sync) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Параллельная работа нескольких планшетов:</div>
+          <label class="check-item"><input type="checkbox"><span>Откройте один и тот же стол на Планшете А (официант) и Планшете Б (бармен/админ).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Добавьте блюдо на Планшете А -> убедитесь, что на Планшете Б состав заказа и статус стола обновились мгновенно (через Firestore real-time).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте отклики при одновременном редактировании стола с двух устройств.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Лимит устройств по токенам:</div>
+          <label class="check-item"><input type="checkbox"><span>Попробуйте подключить больше устройств, чем разрешено токенами активных лицензий ресторана -> проверьте блокировку лишних планшетов.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 16 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 16: Раздельная печать на маркеры (Кухня / Бар / Цеха) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Маршрутизация печати (Print Split):</div>
+          <label class="check-item"><input type="checkbox"><span>Сформируйте заказ, в котором есть и еда (кухня), и напитки (бар).</span></label>
+          <label class="check-item"><input type="checkbox"><span>Отправьте на кухню -> убедитесь, что чек кухни отправляется на кухонный принтер, а чек бара — на барный (согласно категориям/департаментам).</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Ошибки печати и повторные попытки:</div>
+          <label class="check-item"><input type="checkbox"><span>Выключите кухонный принтер (нет бумаги / нет сети) -> отправьте заказ.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте появление понятного предупреждения на планшете и возможность повторить печать (Retry) после включения принтера.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 17 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 17: Экспорт Данных и Отчетность в Excel (XLSX Export) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Выгрузка отчетов:</div>
+          <label class="check-item"><input type="checkbox"><span>Экспортируйте Движения по складу (ProductMovements) в файл .xlsx.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Экспортируйте Продажи и Финансовые итоги.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Откройте файлы в Excel/Google Таблицах -> проверьте корректность столбцов, сумм, дат и отсутствие кракозябр в армянском тексте.</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 18 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 18: Панель Управления SuperAdmin (SuperAdminDashboard) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Управление ресторанами и тумблерами (Feature Toggles):</div>
+          <label class="check-item"><input type="checkbox"><span>Зайдите под SuperAdmin.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Включите/выключите для ресторана функции: isChatEnabled, isRecipesEnabled, isFraudControlEnabled, isCash1Enabled.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Зайдите под рестораном и убедитесь, что отключенные модули пропали из интерфейса.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Генерация ключей активации:</div>
+          <label class="check-item"><input type="checkbox"><span>Сгенерируйте новый ключ активации и продлите лицензию ресторана на 30 дней -> проверьте обновление даты истечения (licenseExpiresAt).</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этап 19 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title">Этап 19: Стресс-тестирование и Производительность (Stress Testing) <span class="stage-badge"></span></div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="stage-content">
+        <div class="section">
+          <div class="section-title">1. Большой объем данных:</div>
+          <label class="check-item"><input type="checkbox"><span>Наполните базу 500+ позициями товаров и 1000+ движениями по складу.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте плавность скролла и скорость поиска на странице Склада и Меню.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Проверьте работу пагинации на складе при заполнении 10+ страниц.</span></label>
+        </div>
+        <div class="section">
+          <div class="section-title">2. Память и адаптивность:</div>
+          <label class="check-item"><input type="checkbox"><span>Поверните планшет (Landscape ↔️ Portrait) -> проверьте, что сетка столов и интерфейс заказа адаптируются без съезжания верстки.</span></label>
+          <label class="check-item"><input type="checkbox"><span>Оставьте приложение активным на 12+ часов (эмуляция смены в ресторане) -> убедитесь в отсутствии утечек памяти и зависаний.</span></label>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'lumina_pos_qa_checklist_v1';
+  const checkboxes = document.querySelectorAll('.check-item input[type="checkbox"]');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const stages = document.querySelectorAll('.stage');
+  const toggleAllBtn = document.getElementById('toggleAllBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let currentFilter = 'all';
+
+  // Load saved state
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const states = JSON.parse(saved);
+      checkboxes.forEach((cb, i) => {
+        if (states[i]) {
+          cb.checked = true;
+          cb.closest('.check-item').classList.add('done');
+        }
+      });
+    }
+    updateStats();
+  }
+
+  // Save current state
+  function saveState() {
+    const states = Array.from(checkboxes).map(cb => cb.checked);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  }
+
+  // Update Progress and Badges
+  function updateStats() {
+    const total = checkboxes.length;
+    const completed = Array.from(checkboxes).filter(cb => cb.checked).length;
+    const percent = Math.round((completed / total) * 100) || 0;
+
+    progressFill.style.width = percent + '%';
+    progressText.textContent = `${percent}% (${completed} / ${total})`;
+
+    // Update Stage Badges
+    stages.forEach(stage => {
+      const stageBoxes = stage.querySelectorAll('input[type="checkbox"]');
+      const stageDone = Array.from(stageBoxes).filter(cb => cb.checked).length;
+      const badge = stage.querySelector('.stage-badge');
+      badge.textContent = `${stageDone}/${stageBoxes.length}`;
+      if (stageDone === stageBoxes.length && stageBoxes.length > 0) {
+        badge.style.borderColor = 'var(--accent)';
+        badge.style.color = 'var(--accent)';
+      } else {
+        badge.style.borderColor = 'var(--border)';
+        badge.style.color = 'var(--text-muted)';
+      }
+    });
+
+    applyFilter();
+  }
+
+  // Checkbox Click Handler
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const parent = cb.closest('.check-item');
+      if (cb.checked) {
+        parent.classList.add('done');
+      } else {
+        parent.classList.remove('done');
+      }
+      saveState();
+      updateStats();
+    });
+  });
+
+  // Filter Logic
+  function applyFilter() {
+    document.querySelectorAll('.check-item').forEach(item => {
+      const isDone = item.classList.contains('done');
+      if (currentFilter === 'all') {
+        item.classList.remove('hidden');
+      } else if (currentFilter === 'pending') {
+        item.classList.toggle('hidden', isDone);
+      } else if (currentFilter === 'completed') {
+        item.classList.toggle('hidden', !isDone);
+      }
+    });
+  }
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      applyFilter();
+    });
+  });
+
+  // Stage Accordions
+  stages.forEach(stage => {
+    const header = stage.querySelector('.stage-header');
+    header.addEventListener('click', () => {
+      stage.classList.toggle('closed');
+    });
+  });
+
+  // Expand / Collapse All
+  let allClosed = false;
+  toggleAllBtn.addEventListener('click', () => {
+    allClosed = !allClosed;
+    stages.forEach(stage => {
+      if (allClosed) {
+        stage.classList.add('closed');
+      } else {
+        stage.classList.remove('closed');
+      }
+    });
+    toggleAllBtn.textContent = allClosed ? 'Развернуть все' : 'Свернуть все';
+  });
+
+  // Reset Progress
+  resetBtn.addEventListener('click', () => {
+    if (confirm('Сбросить весь прогресс тестирования?')) {
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        cb.closest('.check-item').classList.remove('done');
+      });
+      localStorage.removeItem(STORAGE_KEY);
+      updateStats();
+    }
+  });
+
+  // Initialize
+  loadState();
+</script>
+
+</body>
+</html>
